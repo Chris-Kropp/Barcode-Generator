@@ -1,0 +1,7 @@
+# ignore all
+*
+# include main, license and, gitignore
+!Main.py
+!.gitignore
+!LICENSE
+!User\ Manual.pdf

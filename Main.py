@@ -71,6 +71,12 @@ class BarcodeGenerator:
         self.progressbar["value"] = 0
         self.progressbar["maximum"] = 100
 
+
+        ########## CONFIG VARIABLES ##########
+        self.textScale = 2.5
+        self.topTextOffset = 7
+        self.deleteTempFiles = False
+
         mainloop()
 
     def val0(self, *args):
@@ -132,56 +138,71 @@ class BarcodeGenerator:
         code39 = barcode.get_barcode_class('code39')
 
         BarImage = code39("THISISATEMPORARYBARCODEUSEDFORGETTINGTEXT", add_checksum=False, writer=ImageWriter())
-        BarImage.save('top+bottom', text=(self.topText.get()))
-        im = Image.open("top+bottom.png")
+        BarImage.save('top+bottomtop', text=(self.topText.get()))
+        im = Image.open("top+bottomtop.png")
+        try:
+            if(self.deleteTempFiles):
+                os.remove("top+bottomtop.png")
+        except Exception as e:
+            print(e)
         pix = im.load()
         first = 1
         for i in range(1682):
-            if(pix[i,255] != (255,255,255)):
+            if(pix[i,230] != (255,255,255)):
                 if(first == 1):
                     first = 0
                     minpix = i
                 maxpix = i
 
-        topBox = (minpix-5, 245, maxpix+7, 267)
+        ############## ADD CONDITIONAL SIZING ? POSITIONING BASED OFF TEXT INCLUDED (I AM CURRENTLY ASSUMING THE POSITION IS GETTING ADJUSTED BASED OFF IF THE TEXT GOES ABOVE OR BELOW TO KEEP IT CENTERED AT THE SAME POINT)
 
-        topSize = ((maxpix + 7) - (minpix - 5))
+        topBox = (minpix-10, 205, maxpix+10, 245)
+        topSize = ((maxpix + 10) - (minpix - 10))
 
         BarImage = code39("THISISATEMPORARYBARCODEUSEDFORGETTINGTEXT", add_checksum=False, writer=ImageWriter())
-        BarImage.save('top+bottom', text=(self.bottomText.get()))
-        im2 = Image.open("top+bottom.png")
+        BarImage.save('top+bottombottom', text=(self.bottomText.get()))
+        im2 = Image.open("top+bottombottom.png")
+        try:
+            if(self.deleteTempFiles):
+                os.remove("top+bottombottom.png")
+        except Exception as e:
+            print(e)
         pix = im2.load()
 
         first = 1
         for i in range(1682):
-            if(pix[i, 255] != (255, 255, 255)):
+            if(pix[i, 230] != (255, 255, 255)):
                 if(first == 1):
                     first = 0
                     minpix = i
                 maxpix = i
 
-        bottomBox = (minpix - 5, 245, maxpix + 7, 267)
-        bottomSize = ((maxpix + 7) - (minpix - 5))
+        bottomBox = (minpix-10, 215, maxpix+10, 255)
+        bottomSize = ((maxpix + 10) - (minpix - 10))
 
-        im2.save("top+bottom.png")
+        if(not self.deleteTempFiles):
+            im2.save("top+bottom.png")
 
         tboxc = im.crop(topBox)
+        tboxc = tboxc.resize((int(topSize/self.textScale), int(40/self.textScale)))
         bboxc = im2.crop(bottomBox)
-        image = Image.new('RGBA', (max(topSize, bottomSize), 48), "white")
+        bboxc = bboxc.resize((int(bottomSize/self.textScale), int(40/self.textScale)))
+        image = Image.new('RGBA', (int(max(topSize, bottomSize)/self.textScale), int(40/self.textScale)*2), "white")
         if(topSize>=bottomSize):
-            sizeDif = int((topSize - bottomSize) / 2)
-            image.paste(tboxc, (0, 0, topSize, 22))
-            image.paste(bboxc, (sizeDif, 23, bottomSize+sizeDif, 45))
+            sizeDif = int((topSize - bottomSize) // 2)
+            image.paste(tboxc, (0, 0)) #, topSize, 22))
+            image.paste(bboxc, (int(sizeDif/self.textScale), int(40/self.textScale))) #, bottomSize+sizeDif, 45))
         else:
-            sizeDif = int((bottomSize - topSize) / 2)
-            image.paste(tboxc, (sizeDif, 0, topSize+sizeDif, 22))
-            image.paste(bboxc, (0, 23, bottomSize, 45))
+            sizeDif = int((bottomSize - topSize) // 2)
+            image.paste(tboxc, (int(sizeDif/self.textScale), 0))#, topSize+sizeDif, 22))
+            image.paste(bboxc, (0, int(40/self.textScale)))#, bottomSize, 45))
 
-        image.save('testsavepastewords.png')
+        if(not self.deleteTempFiles):
+            image.save("top+bottom.png")
         im.close()
 
-        sizex,sizey = image.size
-        bx = (1,1,sizex,48)
+        sizex, sizey = image.size
+        bx = (1,1,sizex,sizey)
         rgn = image.crop(bx)
         fullImg = Image.new('RGBA', (2750, 2125), "white")
 
@@ -193,12 +214,17 @@ class BarcodeGenerator:
                 BarImage = code39((self.tcode.get() + strcode), add_checksum=False, writer=ImageWriter())
                 BarImage.save('tmp')
                 BarImage = Image.open("tmp.png")
+                try:
+                    os.remove("tmp.png")
+                except Exception as e:
+                    print(e)
                 xoff = 650
                 yoff = 150
                 x,y = BarImage.size
-                tmpbox = (1, y-35, x, y-15)
-                tmptoPaste = (50 + (xoff * j), 185 + (yoff*i), x+49 + (xoff * j), 205 + (yoff*i))
+                tmpbox = (1, y-75, x, y-15)
+                tmptoPaste = (50 + (xoff * j), 185 + (yoff*i), int(x/self.textScale)+50 + (xoff * j), int(60/self.textScale)+185 + (yoff*i))
                 tmpregion = BarImage.crop(tmpbox)
+                tmpregion = tmpregion.resize((int(x/self.textScale), int(60/self.textScale)))
                 fullImg.paste(tmpregion, tmptoPaste)
 
                 box = (1, 1, x, 54)
@@ -208,7 +234,7 @@ class BarcodeGenerator:
 
                 startx = int((x-sizex)/2)
 
-                pst = (startx+60 + (xoff * j), 90 + (yoff * i), sizex + startx+59 + (xoff * j), 137 + (yoff * i))
+                pst = (startx+60 + (xoff * j), 90+self.topTextOffset + (yoff * i), sizex + startx+59 + (xoff * j), 89+sizey+self.topTextOffset + (yoff * i))
                 fullImg.paste(rgn, pst)
 
                 self.progressbar["value"] = int((progcount / (13*4))*100)
@@ -224,6 +250,7 @@ class BarcodeGenerator:
     def saveconf(self):
         file = open("conf.ini", "w+")
         self.code.set(self.increment_code(self.n))
+        a = f"{self.topText.get()}\n{self.bottomText.get()}\n{self.tcode.get()}\n{self.code.get()}"
         file.write(f"{self.topText.get()}\n{self.bottomText.get()}\n{self.tcode.get()}\n{self.code.get()}")
         file.close()
 
