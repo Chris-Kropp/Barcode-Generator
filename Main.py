@@ -74,8 +74,9 @@ class BarcodeGenerator:
 
         ########## CONFIG VARIABLES ##########
         self.textScale = 2.5
-        self.topTextOffset = 7
-        self.deleteTempFiles = False
+        self.topTextOffset = 15
+        self.bottomTextOffsetX = 235
+        self.deleteTempFiles = True
 
         mainloop()
 
@@ -156,7 +157,7 @@ class BarcodeGenerator:
 
         ############## ADD CONDITIONAL SIZING ? POSITIONING BASED OFF TEXT INCLUDED (I AM CURRENTLY ASSUMING THE POSITION IS GETTING ADJUSTED BASED OFF IF THE TEXT GOES ABOVE OR BELOW TO KEEP IT CENTERED AT THE SAME POINT)
 
-        topBox = (minpix-10, 205, maxpix+10, 245)
+        topBox = (minpix-10, 215, maxpix+10, 255)
         topSize = ((maxpix + 10) - (minpix - 10))
 
         BarImage = code39("THISISATEMPORARYBARCODEUSEDFORGETTINGTEXT", add_checksum=False, writer=ImageWriter())
@@ -222,7 +223,7 @@ class BarcodeGenerator:
                 yoff = 150
                 x,y = BarImage.size
                 tmpbox = (1, y-75, x, y-15)
-                tmptoPaste = (50 + (xoff * j), 185 + (yoff*i), int(x/self.textScale)+50 + (xoff * j), int(60/self.textScale)+185 + (yoff*i))
+                tmptoPaste = (self.bottomTextOffsetX + (xoff * j), 185 + (yoff*i), int(x/self.textScale)+self.bottomTextOffsetX + (xoff * j), int(60/self.textScale)+185 + (yoff*i))
                 tmpregion = BarImage.crop(tmpbox)
                 tmpregion = tmpregion.resize((int(x/self.textScale), int(60/self.textScale)))
                 fullImg.paste(tmpregion, tmptoPaste)
