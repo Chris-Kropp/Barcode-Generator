@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter.ttk import Progressbar, Style
 
+from showinfm import show_in_file_manager
+
 from PIL import ImageFont, Image, ImageDraw
 import os
 import barcode
@@ -72,11 +74,13 @@ class BarcodeGenerator:
         self.progressbar["maximum"] = 100
 
 
+        self.fileNames = []
         ########## CONFIG VARIABLES ##########
         self.textScale = 2.5
         self.topTextOffset = 15
         self.bottomTextOffsetX = 235
         self.deleteTempFiles = True
+        self.lowerCharacters = {'g', 'j', 'q', 'p', 'y'}
 
         mainloop()
 
@@ -134,11 +138,19 @@ class BarcodeGenerator:
             self.p["value"] = (int(((m+1) / int(self.numToMake.get())) * 100))
             self.window.update()
         self.saveconf()
+        self.saveAsPdf()
+
+    def containsLower(self, text):
+        for char in text:
+            if(char in self.lowerCharacters):
+                return True
+        return False
 
     def generate_work(self, k):
         code39 = barcode.get_barcode_class('code39')
 
         BarImage = code39("THISISATEMPORARYBARCODEUSEDFORGETTINGTEXT", add_checksum=False, writer=ImageWriter())
+        
         BarImage.save('top+bottomtop', text=(self.topText.get()))
         im = Image.open("top+bottomtop.png")
         try:
@@ -156,8 +168,12 @@ class BarcodeGenerator:
                 maxpix = i
 
         ############## ADD CONDITIONAL SIZING ? POSITIONING BASED OFF TEXT INCLUDED (I AM CURRENTLY ASSUMING THE POSITION IS GETTING ADJUSTED BASED OFF IF THE TEXT GOES ABOVE OR BELOW TO KEEP IT CENTERED AT THE SAME POINT)
-
-        topBox = (minpix-10, 215, maxpix+10, 255)
+        topBoxOffset = 215
+        topBoxYSize = 40
+        topContainsLower = self.containsLower(self.topText.get())
+        if(topContainsLower):
+            topBoxOffset -= 8
+        topBox = (minpix-10, topBoxOffset, maxpix+10, topBoxOffset+topBoxYSize)
         topSize = ((maxpix + 10) - (minpix - 10))
 
         BarImage = code39("THISISATEMPORARYBARCODEUSEDFORGETTINGTEXT", add_checksum=False, writer=ImageWriter())
@@ -178,7 +194,12 @@ class BarcodeGenerator:
                     minpix = i
                 maxpix = i
 
-        bottomBox = (minpix-10, 215, maxpix+10, 255)
+        bottomBoxOffset = 215
+        bottomBoxYSize = 40
+        bottomContainsLower = self.containsLower(self.bottomText.get())
+        if(bottomContainsLower):
+            bottomBoxOffset -= 8
+        bottomBox = (minpix-10, bottomBoxOffset, maxpix+10, bottomBoxOffset+bottomBoxYSize)
         bottomSize = ((maxpix + 10) - (minpix - 10))
 
         if(not self.deleteTempFiles):
@@ -188,7 +209,7 @@ class BarcodeGenerator:
         tboxc = tboxc.resize((int(topSize/self.textScale), int(40/self.textScale)))
         bboxc = im2.crop(bottomBox)
         bboxc = bboxc.resize((int(bottomSize/self.textScale), int(40/self.textScale)))
-        image = Image.new('RGBA', (int(max(topSize, bottomSize)/self.textScale), int(40/self.textScale)*2), "white")
+        image = Image.new('RGB', (int(max(topSize, bottomSize)/self.textScale), int(40/self.textScale)*2), "white")
         if(topSize>=bottomSize):
             sizeDif = int((topSize - bottomSize) // 2)
             image.paste(tboxc, (0, 0)) #, topSize, 22))
@@ -205,7 +226,7 @@ class BarcodeGenerator:
         sizex, sizey = image.size
         bx = (1,1,sizex,sizey)
         rgn = image.crop(bx)
-        fullImg = Image.new('RGBA', (2750, 2125), "white")
+        fullImg = Image.new('RGB', (2750, 2125), "white")
 
         progcount = 0
         for i in range(13):
@@ -246,6 +267,7 @@ class BarcodeGenerator:
         self.window.update()
 
         file = f'{self.tcode.get()}{self.code.get()}({k}) barcodes.png'
+        self.fileNames.append(file)
         fullImg.save(file)
 
     def saveconf(self):
@@ -254,5 +276,18 @@ class BarcodeGenerator:
         a = f"{self.topText.get()}\n{self.bottomText.get()}\n{self.tcode.get()}\n{self.code.get()}"
         file.write(f"{self.topText.get()}\n{self.bottomText.get()}\n{self.tcode.get()}\n{self.code.get()}")
         file.close()
+
+    def saveAsPdf(self):
+        images = [Image.open(f) for f in self.fileNames]
+        images[0].save(
+            self.topText.get() + "_" + self.bottomText.get() + "_" + self.code.get() + '.pdf', "PDF" ,resolution=100.0, save_all=True, append_images=images[1:]
+        )
+        for file in self.fileNames:
+            if os.path.exists(file):
+                os.remove(file)
+        self.showFileLocation()
+
+    def showFileLocation(self):
+        show_in_file_manager(self.topText.get() + "_" + self.bottomText.get() + "_" + self.code.get() + '.pdf')
 
 BarcodeGenerator()
